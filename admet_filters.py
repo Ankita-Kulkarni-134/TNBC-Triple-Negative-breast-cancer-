@@ -121,14 +121,14 @@ for filename in tqdm(os.listdir(input_folder), desc="Processing CSV files"):
         # FILTER CONDITIONS
         # ----------------------------
         conditions = {
-            'QED': df_cleaned['QED'] > 0.5,
+            'QED': df_cleaned['QED'] > 0.75,
             'PAINS': df_cleaned['PAINS'] == '[-]',
             'Lipinski': df_cleaned['Lipinski'] == 1,
             'GoldenTriangle': df_cleaned['GoldenTriangle'] == 0,
-            'caco2': df_cleaned['caco2'] > -5.15,
-            'BBB': df_cleaned['BBB'] < 0.31,
-            'Ames': df_cleaned['Ames'] < 0.31,
-            'DILI': df_cleaned['DILI'] < 0.31
+            'caco2': df_cleaned['caco2'] > -4.70,
+            'BBB': df_cleaned['BBB'] < 0.20,
+            'Ames': df_cleaned['Ames'] < 0.20,
+            'DILI': df_cleaned['DILI'] < 0.20
         }
 
         # ----------------------------
@@ -151,14 +151,13 @@ for filename in tqdm(os.listdir(input_folder), desc="Processing CSV files"):
             continue
 
         # ----------------------------
-        # SAVE INDIVIDUAL FILE
+        # SAVE INDIVIDUAL FILTERED FILE
         # ----------------------------
         filtered_df.to_csv(output_path, index=False)
 
         # ----------------------------
-        # STORE FOR GLOBAL CONCAT
+        # STORE FOR FINAL MERGE
         # ----------------------------
-        filtered_df['Source_File'] = filename
         all_filtered_dfs.append(filtered_df)
 
         summary_list.append((filename, "PROCESSED", len(filtered_df)))
@@ -167,21 +166,47 @@ for filename in tqdm(os.listdir(input_folder), desc="Processing CSV files"):
         summary_list.append((filename, f"ERROR - {str(e)}", 0))
 
 # ================================
-# CONCATENATE ALL FILTERED RESULTS
+# FINAL: FIRST COLUMN ONLY + SPLIT
 # ================================
 if all_filtered_dfs:
     combined_df = pd.concat(all_filtered_dfs, ignore_index=True)
 
-    combined_output_path = os.path.join(
-        output_folder, "ALL_FILTERED_COMBINED.csv"
+    # 🔴 STRICT RULE: FIRST COLUMN ONLY
+    first_col_name = combined_df.columns[0]
+    first_col_df = (
+        combined_df[[first_col_name]]
+        .dropna()
+        .drop_duplicates()
+        .reset_index(drop=True)
     )
 
-    combined_df.to_csv(combined_output_path, index=False)
+    total_rows = len(first_col_df)
+    print(f"\n🧪 Total unique entries in first column: {total_rows}")
+    print(f"📌 Extracted column: {first_col_name}")
 
-    print(f"\n✅ Combined filtered file saved to:\n{combined_output_path}")
-    print(f"🧪 Total molecules after filtering: {len(combined_df)}")
+    # ----------------------------
+    # SPLIT INTO 5 FILES
+    # ----------------------------
+    n_splits = 5
+    chunk_size = (total_rows // n_splits) + 1
+
+    for i in range(n_splits):
+        start = i * chunk_size
+        end = start + chunk_size
+        chunk_df = first_col_df.iloc[start:end]
+
+        if chunk_df.empty:
+            continue
+
+        output_file = os.path.join(
+            output_folder, f"FINAL_PART_{i+1}.csv"
+        )
+
+        chunk_df.to_csv(output_file, index=False)
+        print(f"✅ Saved: {output_file} | Rows: {len(chunk_df)}")
+
 else:
-    print("\n⚠️ No filtered data available to combine.")
+    print("\n⚠️ No filtered data available to split.")
 
 # ================================
 # SAVE SUMMARY
