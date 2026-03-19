@@ -23,7 +23,8 @@ numeric_columns = [
     'caco2',
     'BBB',
     'Ames',
-    'DILI'
+    'DILI',
+    'Carcinogenicity'
 ]
 
 # ================================
@@ -128,7 +129,8 @@ for filename in tqdm(os.listdir(input_folder), desc="Processing CSV files"):
             'caco2': df_cleaned['caco2'] > -4.70,
             'BBB': df_cleaned['BBB'] < 0.20,
             'Ames': df_cleaned['Ames'] < 0.20,
-            'DILI': df_cleaned['DILI'] < 0.20
+            'DILI': df_cleaned['DILI'] < 0.20,
+            'Carcinogenicity' : df_cleaned['Carcinogenicity'] < 0.30
         }
 
         # ----------------------------
@@ -142,7 +144,7 @@ for filename in tqdm(os.listdir(input_folder), desc="Processing CSV files"):
         # RELAXED FILTER
         # ----------------------------
         filtered_df = (
-            df_cleaned[df_cleaned['FilterScore'] >= 4]
+            df_cleaned[df_cleaned['FilterScore'] >= 5]
             .drop(columns=['FilterScore'])
         )
 
